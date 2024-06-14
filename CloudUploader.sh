@@ -77,4 +77,14 @@ else
 
 fi
 
+# Function to login and authenticate Azure CLI
+azure_login() {
+	echo "Logging into Azure..."
+	az login --use-device-code
+
+}
+
+# Calling the login function
+azure_login
+
 
