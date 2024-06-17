@@ -87,4 +87,13 @@ azure_login() {
 # Calling the login function
 azure_login
 
+# Function to print out recommended regions
+print_regions() {
+	regions_array=($(az account list-locations --query "[?metadata.regionCategory=='Recommended'].{Name:name}" -o tsv | head -n 5))
+	for i in ${regions_array[@]}
+	do 
+		echo "$i"
+	done 
+
+}
 
