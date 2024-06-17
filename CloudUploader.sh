@@ -31,7 +31,7 @@ echo "winget install -e --id Microsoft.AzureCLI"
 
 # Function to prompt user to install Azure CLI
 prompt_install_azure_cli() {
-	.
+	
 	read -p "Azure CLI has not been detected. This tool requires Azure CLI. Would you like to install it now? (yes or no): " option
 
 	case $option in
@@ -120,4 +120,15 @@ select_region() {
 # Calling the select region function
 select_region
 
+# Function to check for resource group
+check_resource_group() {
+	while true; do
+		read -p "Enter a name for your resource group: " resource_group
+		if [ $(az group exists --name $resource_group) = true ]; then
+			echo "A resource group with this name "$resource_group" already exists in $selected_region. Please provide another name..."
+		else 
+			break
+		fi 
+	done 
 
+}
