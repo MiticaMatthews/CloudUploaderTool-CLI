@@ -87,7 +87,7 @@ azure_login() {
 # Calling the login function
 azure_login
 
-# Function to print out recommended regions
+# Function to print out 5 recommended regions
 print_regions() {
 	regions_array=($(az account list-locations --query "[?metadata.regionCategory=='Recommended'].{Name:name}" -o tsv | head -n 5))
 	for i in ${regions_array[@]}
@@ -96,4 +96,28 @@ print_regions() {
 	done 
 
 }
+
+# Function to select a region
+select_region() {
+	local region_exists=false
+	while [[ "$region_exists" == false ]]; do 
+		print_regions
+		read -p "Enter your region: " selected_region
+		for i in ${regions_array[@]}
+		do 
+			if [[ "$selected_region" == "$i" ]];then 
+				region_exists=true
+				echo "Region exists!"
+				break 
+			else 
+				continue
+			fi 
+		done 
+	done 
+	
+}
+
+# Calling the select region function
+select_region
+
 
