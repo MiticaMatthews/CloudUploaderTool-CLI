@@ -146,3 +146,13 @@ create_resource_group() {
 # Calling the create resource group function
 create_resource_group
 
+# Function to list all resource groups
+list_resource_groups() {
+	az group list -o table
+
+}
+
+# Calling the list resource groups function
+list_resource_groups
+
+
