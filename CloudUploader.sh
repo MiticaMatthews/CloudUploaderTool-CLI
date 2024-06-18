@@ -120,14 +120,46 @@ select_region() {
 # Calling the select region function
 select_region
 
+# Function to create a resource group
+create_resource_group() {
+	echo "Creating resource group: $resource_group in $selected_region."
+	az group create -g $resource_group -l $selected_region --query "properties.provisioningState" -o tsv
+
+}
+
+# Calling the create a resource group function
+create_resource_group
+
 # Function to check for resource group
 check_resource_group() {
 	while true; do
 		read -p "Enter a name for your resource group: " resource_group
-		if [ $(az group exists --name $resource_group) = true ]; then
-			echo "A resource group with this name "$resource_group" already exists in $selected_region. Please provide another name..."
+		if [ "$(az group exists --name "$resource_group")" = "true" ]; then
+			echo "A resource group with this name "$resource_group" already exists in $selected_region."
+			read -p "Would you like to use a pre-made resource group? (yes or no): " choice
+
+			case $choice in
+				Y|y|YES|yes) 
+					read -p "Enter the name of your pre-made resource group: " pre_resource_group
+					if [ "$(az group show --name "pre_resource_group" --query "name" -o tsv)" = "$pre_resource_group" ]; then 
+						resource_group=$pre_resource_group
+						echo "Match detected. Using your pre-made resource group: $pre_resource_group"
+						break 
+					else 
+						echo "No match found. Please provide another name."
+					fi 
+					;;
+					
+				N|n|NO|no)
+					echo "Please provide another name for your resource group..."
+					;; 
+				*) 
+					echo "Invalid option. Please enter yes or no."
+					;;
+			esac
 		else 
-			break
+
+			break 
 		fi 
 	done 
 
@@ -135,16 +167,6 @@ check_resource_group() {
 
 # Calling the check resource group function
 check_resource_group
-
-# Function to create resource group
-create_resource_group() {
-	echo "Creating resource group: $resource_group in $selected_region."
-	az group create -g $resource_group -l $selected_region | --query "properties.provisioningState" -o tsv
-
-}
-
-# Calling the create resource group function
-create_resource_group
 
 # Function to list all resource groups
 list_resource_groups() {
@@ -154,5 +176,6 @@ list_resource_groups() {
 
 # Calling the list resource groups function
 list_resource_groups
+
 
 
