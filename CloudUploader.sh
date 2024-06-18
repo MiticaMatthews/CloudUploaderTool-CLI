@@ -132,3 +132,17 @@ check_resource_group() {
 	done 
 
 }
+
+# Calling the check resource group function
+check_resource_group
+
+# Function to create resource group
+create_resource_group() {
+	echo "Creating resource group: $resource_group in $selected_region."
+	az group create -g $resource_group -l $selected_region | --query "properties.provisioningState" -o tsv
+
+}
+
+# Calling the create resource group function
+create_resource_group
+
