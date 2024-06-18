@@ -224,5 +224,60 @@ list_storage_accounts() {
 # Calling the list resource groups function
 list_storage_accounts
 
+# Function to create a container
+create_container() {
+	echo "Creating a container: $storage_container in storage account: $storage_account in resource group: $resource_group."
+	az storage container create --name "$storage_container" --account-name "$storage_account" --auth-mode login
+}
 
+# Calling the create a container function
+create_container
+
+# Function to check for container
+check_container() {
+	while true; do
+		read -p "Enter a name for your container: " storage_container
+		name_check=$(az storage container exists --name "$storage_container" --account-name $storage_account --query "exists" -o tsv)
+		if [ "$name_check" = "true" ]; then
+            echo "A container with the name: $storage_container already exists in the storage account: $storage_account."
+			read -p "Would you like to use a pre-made storage container? (yes or no): " choice
+
+			case $choice in
+				Y|y|YES|yes) 
+					read -p "Enter the name of your pre-made storage container: " pre_storage_container
+					# Checking whether the provided pre-made storage container exists
+					container_check=$(az storage container show --name "$pre_storage_container" --query "name" -o tsv)
+					if [ "$container_check" = "$pre_storage_container" ]; then 
+						storage_container=$pre_storage_container
+						echo "Match detected. Using your pre-made storage container: $pre_storage_container"
+						break 
+					else 
+						echo "No match found. Please provide another name."
+					fi 
+					;;
+					
+				N|n|NO|no)
+					echo "Please provide another name for your storage container..."
+					;; 
+				*) 
+					echo "Invalid option. Please enter yes or no."
+					;;
+			esac
+		else 
+			echo "The storage container name: $storage_container is available." 
+			break 
+		fi 
+	done 
+}
+
+# Calling the check container function
+check_container
+
+# Function to list all storage containers
+list_storage_containers() {
+	az storage container list --account-name "$storage_account" -o table
+}
+
+# Calling the list resource groups function
+list_storage_containers
 
