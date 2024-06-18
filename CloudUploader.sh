@@ -5,28 +5,26 @@
 
 # Functions for  installing Azure CLI on different environments
 install_azure_cli_debian(){
-echo "Detected Debian-based system. Installing Azure CLI..."
-curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+    echo "Detected Debian-based system. Installing Azure CLI..."
+    curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
 }
 
 install_azure_cli_macos(){
-echo "Detected MacOS. Installing Azure CLI..."
+    echo "Detected MacOS. Installing Azure CLI..."
 # Checking for Homebrew package manager 
 if ! command -v brew &> /dev/null;then
 	echo "Homebrew package manager not found. Installing Homebrew first..."
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi 
 brew update && brew install azure-cli
-
 }
 
 install_azure_cli_windows(){
-echo "Detected Windows. Please follow these instructions to install Azure CLI:"
-echo "1. Download the MSI installer from https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-windows?tabs=azure-cli#install-or-update"
-echo "2. Run the installer and follow the prompts."
-echo "Alternatively, use Windows Package manager to install Azure CLI."
-echo "winget install -e --id Microsoft.AzureCLI"
-
+    echo "Detected Windows. Please follow these instructions to install Azure CLI:"
+    echo "1. Download the MSI installer from https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-windows?tabs=azure-cli#install-or-update"
+    echo "2. Run the installer and follow the prompts."
+    echo "Alternatively, use Windows Package manager to install Azure CLI."
+    echo "winget install -e --id Microsoft.AzureCLI"
 }
 
 # Function to prompt user to install Azure CLI
@@ -66,7 +64,6 @@ prompt_install_azure_cli() {
 			echo "Invalid option. Please enter yes or no."
 			;;
 	esac 
-
 }
 
 #Check whether Azure CLI is installed
@@ -81,7 +78,6 @@ fi
 azure_login() {
 	echo "Logging into Azure..."
 	az login --use-device-code
-
 }
 
 # Calling the login function
@@ -94,7 +90,6 @@ print_regions() {
 	do 
 		echo "$i"
 	done 
-
 }
 
 # Function to select a region
@@ -114,7 +109,6 @@ select_region() {
 			fi 
 		done 
 	done 
-	
 }
 
 # Calling the select region function
@@ -124,7 +118,6 @@ select_region
 create_resource_group() {
 	echo "Creating resource group: $resource_group in $selected_region."
 	az group create -g $resource_group -l $selected_region --query "properties.provisioningState" -o tsv
-
 }
 
 # Calling the create a resource group function
@@ -135,7 +128,7 @@ check_resource_group() {
 	while true; do
 		read -p "Enter a name for your resource group: " resource_group
 		if [ "$(az group exists --name "$resource_group")" = "true" ]; then
-			echo "A resource group with this name "$resource_group" already exists in $selected_region."
+			echo "A resource group with the name "$resource_group" already exists in $selected_region."
 			read -p "Would you like to use a pre-made resource group? (yes or no): " choice
 
 			case $choice in
@@ -158,11 +151,10 @@ check_resource_group() {
 					;;
 			esac
 		else 
-
+			echo "The resource group name: $resource_group is available." 
 			break 
 		fi 
 	done 
-
 }
 
 # Calling the check resource group function
@@ -171,11 +163,66 @@ check_resource_group
 # Function to list all resource groups
 list_resource_groups() {
 	az group list -o table
-
 }
 
 # Calling the list resource groups function
 list_resource_groups
+
+# Function to create a storage
+create_storage_account() {
+	echo "Creating storage account: $storage_account in resource group: $resource_group in $selected_region."
+	az storage account create -n $storage_account -g $resource_group -l $selected_region --sku Standard_LRS
+}
+
+# Calling the create a storage account function
+create_storage_account
+
+# Function to check for storage account
+check_storage_account() {
+	while true; do
+		read -p "Enter a name for your storage account: " storage_account
+		name_check=$(az storage account check-name --name "$storage_account" --query "nameAvailable" -o tsv)
+		if [ "$name_check" = "true" ]; then
+			read -p "Would you like to use a pre-made storage account? (yes or no): " choice
+
+			case $choice in
+				Y|y|YES|yes) 
+					read -p "Enter the name of your pre-made storage account: " pre_storage_account
+					# Checking whether the provided pre-made storage account exists
+					account_check=$(az storage account show --name "$pre_storage_account" --query "name" -o tsv)
+					if [ "$account_check" = "$pre_storage_account" ]; then 
+						storage_account=$pre_storage_account
+						echo "Match detected. Using your pre-made storage account: $pre_storage_account"
+						break 
+					else 
+						echo "No match found. Please provide another name."
+					fi 
+					;;
+					
+				N|n|NO|no)
+					echo "Please provide another name for your storage account..."
+					;; 
+				*) 
+					echo "Invalid option. Please enter yes or no."
+					;;
+			esac
+		else 
+			echo "The storage account name: $storage_account is not available. Please provide another name." 
+			break 
+		fi 
+	done 
+}
+
+# Calling the check storage account function
+check_storage_account
+
+# Function to list all storage accounts
+list_storage_accounts() {
+	az storage account list -o table
+}
+
+# Calling the list resource groups function
+list_storage_accounts
 
 
 
