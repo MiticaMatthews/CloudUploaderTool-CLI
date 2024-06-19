@@ -83,10 +83,15 @@ azure_login() {
 # Calling the login function
 azure_login
 
-# Function to print out 5 recommended regions
+# Function to print out recommended regions for UK, Europe and the US
 print_regions() {
-    az account list-locations --query "[?contains(name, 'uk') || contains(name, 'europe') || contains(name, 'us')].name" -o tsv | \
-    grep -E '\b(uksouth|ukwest|northeurope|westeurope|eastus|westus|centralus)\b'
+    regions_array=($(az account list-locations --query "[?contains(name, 'uk') || contains(name, 'europe') || contains(name, 'us')].name" -o tsv | \
+    grep -E '\b(uksouth|ukwest|northeurope|westeurope|eastus|westus|centralus)\b'))
+
+    for i in "${regions_array[@]}"
+    do
+        echo "$i"
+    done
 }
 
 # Function to select a region
