@@ -83,7 +83,8 @@ azure_login() {
 # Calling the login function
 azure_login
 
-# Function to print out recommended regions for UK, Europe and the US
+# Function to print out recommended regions for UK, Europe & the US
+>>>>>>> create_container
 print_regions() {
     regions_array=($(az account list-locations --query "[?contains(name, 'uk') || contains(name, 'europe') || contains(name, 'us')].name" -o tsv | \
     grep -E '\b(uksouth|ukwest|northeurope|westeurope|eastus|westus|centralus)\b'))
@@ -122,9 +123,6 @@ create_resource_group() {
 	az group create -g $resource_group -l $selected_region --query "properties.provisioningState" -o tsv
 }
 
-# Calling the create a resource group function
-create_resource_group
-
 # Function to check for resource group
 check_resource_group() {
 	while true; do
@@ -159,13 +157,16 @@ check_resource_group() {
 	done 
 }
 
-# Calling the check resource group function
-check_resource_group
-
 # Function to list all resource groups
 list_resource_groups() {
 	az group list -o table
 }
+
+# Calling the check resource group function
+check_resource_group
+
+# Calling the create a resource group function
+create_resource_group
 
 # Calling the list resource groups function
 list_resource_groups
@@ -175,9 +176,6 @@ create_storage_account() {
 	echo "Creating storage account: $storage_account in resource group: $resource_group in $selected_region."
 	az storage account create -n $storage_account -g $resource_group -l $selected_region --sku Standard_LRS
 }
-
-# Calling the create a storage account function
-create_storage_account
 
 # Function to check for storage account
 check_storage_account() {
@@ -215,13 +213,16 @@ check_storage_account() {
 	done 
 }
 
-# Calling the check storage account function
-check_storage_account
-
 # Function to list all storage accounts
 list_storage_accounts() {
 	az storage account list -o table
 }
+
+# Calling the check storage account function
+check_storage_account
+
+# Calling the create a storage account function
+create_storage_account
 
 # Calling the list resource groups function
 list_storage_accounts
@@ -231,9 +232,6 @@ create_container() {
 	echo "Creating a container: $storage_container in storage account: $storage_account in resource group: $resource_group."
 	az storage container create --name "$storage_container" --account-name "$storage_account" --auth-mode login
 }
-
-# Calling the create a container function
-create_container
 
 # Function to check for container
 check_container() {
@@ -272,13 +270,16 @@ check_container() {
 	done 
 }
 
-# Calling the check container function
-check_container
-
 # Function to list all storage containers
 list_storage_containers() {
 	az storage container list --account-name "$storage_account" -o table
 }
+
+# Calling the check container function
+check_container
+
+# Calling the create a container function
+create_container
 
 # Calling the list resource groups function
 list_storage_containers
