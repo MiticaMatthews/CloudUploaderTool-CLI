@@ -85,11 +85,8 @@ azure_login
 
 # Function to print out 5 recommended regions
 print_regions() {
-	regions_array=($(az account list-locations --query "[?metadata.regionCategory=='Recommended'].{Name:name}" -o tsv | head -n 5))
-	for i in ${regions_array[@]}
-	do 
-		echo "$i"
-	done 
+    az account list-locations --query "[?contains(name, 'uk') || contains(name, 'europe') || contains(name, 'us')].name" -o tsv | \
+    grep -E '\b(uksouth|ukwest|northeurope|westeurope|eastus|westus|centralus)\b'
 }
 
 # Function to select a region
