@@ -113,173 +113,64 @@ select_region() {
 	done 
 }
 
-# Calling the select region function
-select_region
-
-# Function to create a resource group
-create_resource_group() {
-	echo "Creating resource group: $resource_group in $selected_region."
-	az group create -g $resource_group -l $selected_region --query "properties.provisioningState" -o tsv
+# Function to print resource group naming convention instructions
+rg_naming_instructions() {
+echo "Please follow these instructions to name your resource group."
+sleep 3
+echo "Use the following naming convention format:"
+echo "Format: <resourcetype>-<apporservicename>-<###>"
+sleep 5
+echo "See examples below:"
+sleep 2
+echo "Resource group: rg-xxwebapp-001"
+echo "Storage account: st-xxwebapp-001"
+echo "Storage container: sc-xxwebapp-001"
 }
 
-# Function to check for resource group
-check_resource_group() {
-	while true; do
-		read -p "Enter a name for your resource group: " resource_group
-		if [ "$(az group exists --name "$resource_group")" = "true" ]; then
-			echo "A resource group with the name "$resource_group" already exists in $selected_region."
-			read -p "Would you like to use a pre-made resource group? (yes or no): " choice
-
-			case $choice in
-				Y|y|YES|yes) 
-					read -p "Enter the name of your pre-made resource group: " pre_resource_group
-					if [ "$(az group show --name "pre_resource_group" --query "name" -o tsv)" = "$pre_resource_group" ]; then 
-						resource_group=$pre_resource_group
-						echo "Match detected. Using your pre-made resource group: $pre_resource_group"
-						break 
-					else 
-						echo "No match found. Please provide another name."
-					fi 
-					;;
-					
-				N|n|NO|no)
-					echo "Please provide another name for your resource group..."
-					;; 
-				*) 
-					echo "Invalid option. Please enter yes or no."
-					;;
-			esac
-		else 
-			echo "The resource group name: $resource_group is available." 
-			break 
-		fi 
-	done 
+# Function to get user input to name resource group
+name_resource_group() {
+    read -p "Enter the relevant abbreviation for your resource type (e.g. rg, st, sc): " resource_type
+    read -p "Enter the name of your tool, application or service: " app_name
+    read -p "Enter a unique identifier (e.g. 001): " unique_id
 }
 
-# Function to list all resource groups
+# Function to generate resource group name
+generate_rg_name() {
+resource_name="${resource_type}-${app_name}-${unique_id}"
+echo "$resource_name"
+}
+
+# Function to validate resource group name
+validate_rg_name() {
+if [[ $resource_name =~ ^[a-z]{2}-[a-z]+-[0-9]{3}$ ]]; then
+    echo "Valid resource name: $resource_name."
+else 
+    echo "Invalid resource name: $resource_name."
+    exit 1
+fi 
+}
+
+# Function to create resource group
+create_resource_group () {
+    az group create --location "$selected_region" --name "$resource_name"
+    if [ $? -eq 0 ]; then
+        echo "Resourse group: $resource_name successfully created!"
+    else 
+        echo "Error: Failed to create resource group: $resource_name"
+        exit 1
+    fi 
+}
+
+# Function to list resource groups
 list_resource_groups() {
-	az group list -o table
+az group list -o table
 }
 
-# Calling the check resource group function
-check_resource_group
-
-# Calling the create a resource group function
+select_region
+rg_naming_instructions
+name_resource_group
+generate_rg_name
+validate_rg_name
 create_resource_group
-
-# Calling the list resource groups function
 list_resource_groups
-
-# Function to create a storage
-create_storage_account() {
-	echo "Creating storage account: $storage_account in resource group: $resource_group in $selected_region."
-	az storage account create -n $storage_account -g $resource_group -l $selected_region --sku Standard_LRS
-}
-
-# Function to check for storage account
-check_storage_account() {
-	while true; do
-		read -p "Enter a name for your storage account: " storage_account
-		name_check=$(az storage account check-name --name "$storage_account" --query "nameAvailable" -o tsv)
-		if [ "$name_check" = "true" ]; then
-			read -p "Would you like to use a pre-made storage account? (yes or no): " choice
-
-			case $choice in
-				Y|y|YES|yes) 
-					read -p "Enter the name of your pre-made storage account: " pre_storage_account
-					# Checking whether the provided pre-made storage account exists
-					account_check=$(az storage account show --name "$pre_storage_account" --query "name" -o tsv)
-					if [ "$account_check" = "$pre_storage_account" ]; then 
-						storage_account=$pre_storage_account
-						echo "Match detected. Using your pre-made storage account: $pre_storage_account"
-						break 
-					else 
-						echo "No match found. Please provide another name."
-					fi 
-					;;
-					
-				N|n|NO|no)
-					echo "Please provide another name for your storage account..."
-					;; 
-				*) 
-					echo "Invalid option. Please enter yes or no."
-					;;
-			esac
-		else 
-			echo "The storage account name: $storage_account is not available. Please provide another name." 
-			break 
-		fi 
-	done 
-}
-
-# Function to list all storage accounts
-list_storage_accounts() {
-	az storage account list -o table
-}
-
-# Calling the check storage account function
-check_storage_account
-
-# Calling the create a storage account function
-create_storage_account
-
-# Calling the list resource groups function
-list_storage_accounts
-
-# Function to create a container
-create_container() {
-	echo "Creating a container: $storage_container in storage account: $storage_account in resource group: $resource_group."
-	az storage container create --name "$storage_container" --account-name "$storage_account" --auth-mode login
-}
-
-# Function to check for container
-check_container() {
-	while true; do
-		read -p "Enter a name for your container: " storage_container
-		name_check=$(az storage container exists --name "$storage_container" --account-name $storage_account --query "exists" -o tsv)
-		if [ "$name_check" = "true" ]; then
-            echo "A container with the name: $storage_container already exists in the storage account: $storage_account."
-			read -p "Would you like to use a pre-made storage container? (yes or no): " choice
-
-			case $choice in
-				Y|y|YES|yes) 
-					read -p "Enter the name of your pre-made storage container: " pre_storage_container
-					# Checking whether the provided pre-made storage container exists
-					container_check=$(az storage container show --name "$pre_storage_container" --query "name" -o tsv)
-					if [ "$container_check" = "$pre_storage_container" ]; then 
-						storage_container=$pre_storage_container
-						echo "Match detected. Using your pre-made storage container: $pre_storage_container"
-						break 
-					else 
-						echo "No match found. Please provide another name."
-					fi 
-					;;
-					
-				N|n|NO|no)
-					echo "Please provide another name for your storage container..."
-					;; 
-				*) 
-					echo "Invalid option. Please enter yes or no."
-					;;
-			esac
-		else 
-			echo "The storage container name: $storage_container is available." 
-			break 
-		fi 
-	done 
-}
-
-# Function to list all storage containers
-list_storage_containers() {
-	az storage container list --account-name "$storage_account" -o table
-}
-
-# Calling the check container function
-check_container
-
-# Calling the create a container function
-create_container
-
-# Calling the list resource groups function
-list_storage_containers
 
