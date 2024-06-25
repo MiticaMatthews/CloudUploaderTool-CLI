@@ -113,5 +113,64 @@ select_region() {
 	done 
 }
 
-# Calling the select region function
+# Function to print resource group naming convention instructions
+rg_naming_instructions() {
+echo "Please follow these instructions to name your resource group."
+sleep 3
+echo "Use the following naming convention format:"
+echo "Format: <resourcetype>-<apporservicename>-<###>"
+sleep 5
+echo "See examples below:"
+sleep 2
+echo "Resource group: rg-xxwebapp-001"
+echo "Storage account: st-xxwebapp-001"
+echo "Storage container: sc-xxwebapp-001"
+}
+
+# Function to get user input to name resource group
+name_resource_group() {
+    read -p "Enter the relevant abbreviation for your resource type (e.g. rg, st, sc): " resource_type
+    read -p "Enter the name of your tool, application or service: " app_name
+    read -p "Enter a unique identifier (e.g. 001): " unique_id
+}
+
+# Function to generate resource group name
+generate_rg_name() {
+resource_name="${resource_type}-${app_name}-${unique_id}"
+echo "$resource_name"
+}
+
+# Function to validate resource group name
+validate_rg_name() {
+if [[ $resource_name =~ ^[a-z]{2}-[a-z]+-[0-9]{3}$ ]]; then
+    echo "Valid resource name: $resource_name."
+else 
+    echo "Invalid resource name: $resource_name."
+    exit 1
+fi 
+}
+
+# Function to create resource group
+create_resource_group () {
+    az group create --location "$selected_region" --name "$resource_name"
+    if [ $? -eq 0 ]; then
+        echo "Resourse group: $resource_name successfully created!"
+    else 
+        echo "Error: Failed to create resource group: $resource_name"
+        exit 1
+    fi 
+}
+
+# Function to list resource groups
+list_resource_groups() {
+az group list -o table
+}
+
 select_region
+rg_naming_instructions
+name_resource_group
+generate_rg_name
+validate_rg_name
+create_resource_group
+list_resource_groups
+
