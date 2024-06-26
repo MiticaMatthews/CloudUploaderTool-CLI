@@ -216,6 +216,56 @@ list_storage_accounts() {
     az storage account list -o tsv | awk 'NR==1; NR>1{print ""; print}'
 }
 
+# Function to print storage container naming convention instructions
+sc_naming_instructions() {
+    echo "Please follow these instructions to name your storage container."
+    sleep 3
+    echo "Use the following naming format: "
+    echo "Format: <resourcetype>-<apporservicename>-<###>"
+    sleep 5
+    echo "See example for storage container below: "
+    echo "sc-xxwebapp-001"
+}
+
+# Function to get user input to name storage container
+name_storage_container() {
+    read -p "Enter the abbreviation for your storage container resource (e.g. sc): " resource_type
+    read -p "Enter the name of your tool, application or service: " app_name
+    read -p "Enter a unique identifier (e.g. 001): " unique_id
+}
+
+# Function to generate storage container name
+generate_sc_name() {
+    storage_container_name="${resource_type}-${app_name}-${unique_id}"
+    echo "$storage_container_name"
+}
+
+# Function to validate storage container name
+validate_sc_name() {
+    if [[ $storage_container_name =~ ^[a-z]{2}-[a-z]+-[0-9]{3}$ ]]; then
+        echo "Valid storage container name: $storage_container_name."
+    else 
+        echo "Invlid storage container name: $storage_container_name."
+        exit 1 
+    fi 
+}
+
+# Function to create storage container
+create_storage_container() {
+    az storage container create --name $storage_container_name --account-name $storage_name --auth-mode login
+    if [ $? -eq 0 ]; then 
+        echo "Storage container: $storage_container_name successfully created in storage account: $storage_name!"
+    else 
+        echo "Error: Failed to create storage container: $storage_container_name in storage account: $storage_name."
+        exit 1 
+    fi 
+}
+
+# Function to list storage containers
+list_storage_containers() {
+    az storage container list --account-name $storage_name --auth-mode login -o table
+}
+
 select_region
 rg_naming_instructions
 name_resource_group
@@ -229,3 +279,9 @@ generate_st_name
 validate_st_name
 create_storage_account
 list_storage_accounts
+sc_naming_instructions
+name_storage_container
+generate_sc_name
+validate_sc_name
+create_storage_container
+list_storage_containers
