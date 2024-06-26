@@ -115,16 +115,16 @@ select_region() {
 
 # Function to print resource group naming convention instructions
 rg_naming_instructions() {
-echo "Please follow these instructions to name your resource group."
-sleep 3
-echo "Use the following naming convention format:"
-echo "Format: <resourcetype>-<apporservicename>-<###>"
-sleep 5
-echo "See examples below:"
-sleep 2
-echo "Resource group: rg-xxwebapp-001"
-echo "Storage account: st-xxwebapp-001"
-echo "Storage container: sc-xxwebapp-001"
+    echo "Please follow these instructions to name your resource group."
+    sleep 3
+    echo "Use the following naming convention format:"
+    echo "Format: <resourcetype>-<apporservicename>-<###>"
+    sleep 5
+    echo "See examples below:"
+    sleep 2
+    echo "Resource group: rg-xxwebapp-001"
+    echo "Storage account: st-xxwebapp-001"
+    echo "Storage container: sc-xxwebapp-001"
 }
 
 # Function to get user input to name resource group
@@ -136,34 +136,84 @@ name_resource_group() {
 
 # Function to generate resource group name
 generate_rg_name() {
-resource_name="${resource_type}-${app_name}-${unique_id}"
-echo "$resource_name"
+    resource_name="${resource_type}-${app_name}-${unique_id}"
+    echo "$resource_name"
 }
 
 # Function to validate resource group name
 validate_rg_name() {
-if [[ $resource_name =~ ^[a-z]{2}-[a-z]+-[0-9]{3}$ ]]; then
-    echo "Valid resource name: $resource_name."
-else 
-    echo "Invalid resource name: $resource_name."
-    exit 1
-fi 
+    if [[ $resource_name =~ ^[a-z]{2}-[a-z]+-[0-9]{3}$ ]]; then
+        echo "Valid resource name: $resource_name."
+    else 
+        echo "Invalid resource name: $resource_name."
+        exit 1
+    fi 
 }
 
 # Function to create resource group
 create_resource_group () {
     az group create --location "$selected_region" --name "$resource_name"
     if [ $? -eq 0 ]; then
-        echo "Resourse group: $resource_name successfully created!"
+        echo "Resource group: $resource_name successfully created!"
     else 
-        echo "Error: Failed to create resource group: $resource_name"
+        echo "Error: Failed to create resource group: $resource_name."
         exit 1
     fi 
 }
 
 # Function to list resource groups
 list_resource_groups() {
-az group list -o table
+    az group list -o table
+}
+
+# Function to print storage account naming convention instrucitons
+st_naming_instructions() {
+    echo "Please follow the instructions to name your storage account."
+    sleep 3
+    echo "Use the following naming format: "
+    echo "Format: <resourcetype><apporservicename><###>"
+    sleep 5
+    echo "See example for storage account below: " 
+    echo "stxxwebapp001" 
+}
+
+# Function to get user input to name storage account
+name_storage_account() {
+    read -p "Enter the abbreviation for your storage account resource (e.g. st): " resource_type
+    read -p "Enter the name of your tool, application or service: " app_name
+    read -p "Enter a unique identifier (e.g. 001): " unique_id
+}
+
+# Function to generate storage account name
+generate_st_name() {
+    storage_name="${resource_type}${app_name}${unique_id}"
+    echo "$storage_name"
+}
+
+# Function to validate storage account name 
+validate_st_name() {
+    if [[ $storage_name =~ ^[a-z0-9]{3,24}$ ]]; then
+        echo "Valid storage account name: $storage_name."
+    else 
+        echo "Invalid storage account name: $storage_name."
+        exit 1
+    fi 
+}
+
+# Function to create storage account
+create_storage_account() {
+    az storage account create --name "$storage_name" --resource-group "$resource_name" --location "$selected_region"
+    if [ $? -eq 0 ]; then
+        echo "Storage account: $storage_name successfully created in resource group: $resource_name!" 
+    else 
+        echo "Error: Failed to create storage account: $storage_name in resource group: $resource_name."
+        exit 1
+    fi 
+}
+
+# Function to list storage accounts
+list_storage_accounts() {
+    az storage account list -o tsv | awk 'NR==1; NR>1{print ""; print}'
 }
 
 select_region
@@ -173,4 +223,9 @@ generate_rg_name
 validate_rg_name
 create_resource_group
 list_resource_groups
-
+st_naming_instructions
+name_storage_account
+generate_st_name
+validate_st_name
+create_storage_account
+list_storage_accounts
