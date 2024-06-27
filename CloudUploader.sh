@@ -113,6 +113,13 @@ select_region() {
 	done 
 }
 
+# Function to check if resource group exists
+resource_group_exists() {
+    local resource_name=$1
+    az group show --name "$resource_name" &> /dev/null
+    return $?
+}
+
 # Function to print resource group naming convention instructions
 rg_naming_instructions() {
     echo "Please follow these instructions to name your resource group."
@@ -161,9 +168,44 @@ create_resource_group () {
     fi 
 }
 
+# Function to prompt user to choose pre-made resource group or create a new one
+prompt_premade_rg() {
+    read -p "Would you like to use a pre-made resource group? (yes or no): " use_premade
+    case $use_premade in
+        Y|y|YES|yes)
+            read -p "Enter the name of your pre-made resource: " resource_name
+            if resource_group_exists "$resource_name"; then
+                echo "Using pre-made resource group: $resource_name."
+            else 
+                echo "Resource group: $resource_name does not exist." 
+                exit 1
+            fi 
+            ;;
+       N|n|NO|no)
+           echo "Creating new resource group..."
+           rg_naming_instructions
+           name_resource_group
+           generate_rg_name
+           validate_rg_name
+           create_resource_group
+           ;;
+      *)
+          echo "Invalid input. Please enter 'yes' or 'no'."
+          prompt_premade_rg
+          ;;
+  esac
+}
+
 # Function to list resource groups
 list_resource_groups() {
     az group list -o table
+}
+
+# Function to check if storage account exists
+storage_account_exists() {
+    local storage_name=$1
+    az storage account show --name "$storage_name" &> /dev/null
+    return $?
 }
 
 # Function to print storage account naming convention instrucitons
@@ -211,10 +253,44 @@ create_storage_account() {
     fi 
 }
 
-# Function to list storage accounts
+# Function to prompt user to choose pre-made storage account or create a new one
+prompt_premade_st() {
+    read -p "Would you like to use a pre-made storage account? (yes or no): " use_premade
+    case $use_premade in
+        Y|y|YES|yes)
+            if storage_account_exists "$storage_name"; then
+                echo "Using pre-made storage account: $storage_name."
+            else 
+                echo "Storage account: $storage_name does not exist."
+                exit 1
+            fi 
+            ;;
+         N|n|NO|no)
+             echo "Creating new storage account..."
+             st_naming_instructions 
+             name_storage_account
+             generate_st_name
+             validate_st_name
+             create_storage_account
+             ;;
+         *)
+             echo "Invalid input. Please enter 'yes' or 'no'."
+             prompt_premade_st
+             ;;
+     esac
+}
+
+# Function to list storage accounts. Included additional formatting (spacing) between data/rows after header for improved readability
 list_storage_accounts() {
     az storage account list -o tsv | awk 'NR==1; NR>1{print ""; print}'
 }
+
+# Function to check if storage container exists
+storage_container_exists() {
+    local storage_container_name=$1
+    az storage container show --name "$storage_container_name" &> /dev/null
+    return $?
+} 
 
 # Function to print storage container naming convention instructions
 sc_naming_instructions() {
@@ -261,27 +337,43 @@ create_storage_container() {
     fi 
 }
 
+# Function to prompt user to choose pre-made storage container or create a new one
+prompt_premade_sc() {
+    read -p "Would you like to use a pre-made storage container? (yes or no): " use_premade
+    case $use_premade in
+        Y|y|YES|yes)
+            read -p "Enter the name of your pre-made storage container: " storage_account_name
+            if storage_container_exists "$storage_container_name"; then
+                echo "Using pre-made storage container: $storage_container_name."
+            else 
+                echo "Storage container: $storage_container_name does not exist."
+                exit 1
+            fi 
+            ;;
+         N|n|NO|no)
+             echo "Creating new storage container..."
+             sc_naming_instructions
+             name_storage_container
+             generate_sc_name
+             validate_sc_name
+             create_storage_container
+             ;;
+         *) 
+             echo "Invalid input. Please enter 'yes' or 'no'."
+             prompt_premade_sc
+             ;;
+     esac
+}
+
 # Function to list storage containers
 list_storage_containers() {
     az storage container list --account-name $storage_name --auth-mode login -o table
 }
 
 select_region
-rg_naming_instructions
-name_resource_group
-generate_rg_name
-validate_rg_name
-create_resource_group
+prompt_premade_rg
 list_resource_groups
-st_naming_instructions
-name_storage_account
-generate_st_name
-validate_st_name
-create_storage_account
+prompt_premade_st
 list_storage_accounts
-sc_naming_instructions
-name_storage_container
-generate_sc_name
-validate_sc_name
-create_storage_container
+prompt_premade_sc
 list_storage_containers
