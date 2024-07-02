@@ -83,6 +83,16 @@ azure_login() {
 # Calling the login function
 azure_login
 
+# Function to retrieve the subscription ID using Azure CLI to avoid errors when working with Azure resources
+get_subscription_id() {
+    subscription_id=$(az account show --query "id" --output tsv)
+    if [ -z "$subscription_id" ]; then
+        echo "Error: Failed to retrieve subscription ID."
+        exit 1
+    fi 
+    echo "Successfully retrieved subscription ID: $subscription_id."
+}
+
 # Function to print out recommended regions for UK, Europe & the US
 print_regions() {
     regions_array=($(az account list-locations --query "[?contains(name, 'uk') || contains(name, 'europe') || contains(name, 'us')].name" -o tsv | \
@@ -285,6 +295,28 @@ list_storage_accounts() {
     az storage account list -o tsv | awk 'NR==1; NR>1{print ""; print}'
 }
 
+# Function to assign role to user to ensure proper access management 
+assign_role() {
+    role="Storage Blob Data Contributor"
+    scope="/subscriptions/$subscription_id/resourceGroups/$resource_name/providers/Microsoft.Storage/storageAccounts/$storage_name"
+
+    # Retrieve signed in user's Object ID
+    user_object_id=$(az ad signed-in-user show --query id -o tsv)
+    if [ -z "$user_object_id" ]; then
+        echo "Error: Failed to retrieve signed-in user's Object ID. Object ID cannot be empty."
+    fi 
+    echo "Retrieved signed-in user's Object ID: $user_object_id"
+
+    # Assign role to Object (principal) ID
+    echo "Assigning role $role to principal ID $user_object_id for scope $scope..."
+        az role assignment create --assignee "$user_object_id" --role "$role" --scope "$scope"
+        if [ $? -eq 0 ]; then
+            echo "Role assignment successful."
+        else 
+            echo "Error: Failed to assign role."
+        fi 
+}
+
 # Function to check if storage container exists
 storage_container_exists() {
     local storage_container_name=$1
@@ -328,7 +360,7 @@ validate_sc_name() {
 
 # Function to create storage container
 create_storage_container() {
-    az storage container create --name $storage_container_name --account-name $storage_name --auth-mode login
+    az storage container create --name "$storage_container_name" --account-name "$storage_name" --auth-mode login
     if [ $? -eq 0 ]; then 
         echo "Storage container: $storage_container_name successfully created in storage account: $storage_name!"
     else 
@@ -367,13 +399,136 @@ prompt_premade_sc() {
 
 # Function to list storage containers
 list_storage_containers() {
-    az storage container list --account-name $storage_name --auth-mode login -o table
+    az storage container list --account-name "$storage_name" --auth-mode login -o table
 }
 
+# Function to upload a single file
+file_upload() {
+    az storage blob upload --account-name "$storage_name" --auth-mode login --container-name "$storage_container_name" --name "$file_name" --file "$file_path"
+    if [ $? -eq 0 ]; then
+        echo "Successfully uploaded file: $file_name."
+    else 
+        echo "Error: Failed to upload file: $file_name."
+        exit 1
+    fi
+}
+
+# Function to overwrite file
+file_overwrite() {
+    az storage blob upload --account-name "$storage_name" --auth-mode login --container-name "$storage_container_name" --name "$file_name" --file "$file_path" --overwrite true
+    if [ $? -eq 0 ]; then
+        echo "File successfully overwritten."
+    else 
+        echo "Error: Failed to overwrite file."
+        exit 1
+    fi 
+}
+
+# Function to handle a single file upload 
+handle_single_file_upload() {
+    read -p "Enter the full path of the file you want to upload: " file_path
+    file_name=$(basename "$file_path")
+
+    # Check if file name already exists in container
+    az storage blob show --account-name "$storage_name" --auth-mode login --container-name "$storage_container_name" --name "$file_name" > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        read -p "File name already exists. Would you like to (o)verwrite, (s)kip or (r)ename the file? (O/S/R): " option
+        case $option in
+            O|o) echo "Overwriting the existing file..."
+                file_overwrite
+                ;;
+            S|s) echo "Skipping file upload. Exiting now..."
+                exit 1
+                ;;
+            R|r) read -p "Enter a new name for the file: " new_file_name
+                # Renaming file
+                mv "$file_path" "$(dirname "$file_path")/$new_file_name"
+                file_name="$new_file_name"
+                file_path="$(dirname "$file_path")/$new_file_name"
+                echo "File successfully renamed to: $file_name"
+                file_upload
+                ;;
+             *) echo "Invalid input. Please enter 'O', 'S', or 'R'."
+                handle_single_file_upload
+                ;;
+        esac
+    else 
+        echo "File name does not exist. Uploading file..."
+        file_upload
+    fi
+}
+
+# Function to handle a batch file upload
+handle_batch_file_upload() {
+    read -p "Enter the full local directory path of the files you would like to batch upload: " local_directory_path
+
+    # Validate local directory path
+    if [ ! -d "$local_directory_path" ]; then
+        echo "Error: Local directory: '$local_directory_path' does not exist."
+        exit 1
+    fi 
+
+    # Loop through all files in the selected local directory
+    for file_path in "$local_directory_path"/*;
+    do
+        if [ -f "$file_path" ]; then
+            file_name=$(basename "$file_path")
+
+            # Check if blob name exists in container
+            blob_exists=$(az storage blob exists --account-name "$storage_name" --auth-mode login --container-name "$storage_container_name" --name "$file_name" --query "exists" --output tsv)
+            if [ "$blob_exists" = true ]; then
+                echo "File name: $file_name already exists in the container: $storage_container_name."
+                read -p "Would you like to (o)verwrite, (s)kip or (r)ename the file? (O/S/R): " option
+                case $option in
+                    O|o) echo "Overwriting existing file..."
+                        file_overwrite
+                        ;;
+                    S|s) echo "Skipping file upload for $file_name. Exiting now..."
+                         continue
+                        ;;
+                    R|r) read -p "Enter a new name for the file: " new_file_name
+                         # Renaming file
+                         mv "$file_path" "$(dirname "$file_path")/$new_file_name"
+                         file_name="$new_file_name"
+                         file_path="$(dirname "$file_path")/$new_file_name"
+                         echo "File successfully renamed to: $file_name."
+                         file_upload
+                         ;;
+                       *) echo "Invalid input. Please enter 'O', 'S' or 'R'."
+                           ;;
+                   esac 
+               else 
+                   echo "File name: $file_name does not exist in the container: $storage_container_name. Uploading file now..."
+                   file_upload
+            fi
+        fi 
+    done 
+}
+
+# Prompt for user to choose single or batch file upload
+choose_upload_type() {
+    read -p "Would you like to upload a (s)ingle file or a (b)atch of all files from a local directory? (S/B): " choice
+
+    case $choice in
+        S|s)
+            handle_single_file_upload
+            ;;
+        B|b)
+            handle_batch_file_upload
+            ;;
+           *)
+               echo "Invalid input. Please enter 'S' or 'B'."
+               ;;
+       esac
+}
+
+get_subscription_id
 select_region
 prompt_premade_rg
 list_resource_groups
 prompt_premade_st
 list_storage_accounts
+assign_role
 prompt_premade_sc
 list_storage_containers
+choose_upload_type
