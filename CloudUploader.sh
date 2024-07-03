@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# A bash-based CLI tool that allows users to quickly upload files to Azure blob storage, providing a simple and seamless upload experience similar to popular storage services. 
+# A bash script that allows users to quickly upload files to Azure blob storage via CLI. 
 
 
 # Functions for  installing Azure CLI on different environments
@@ -79,9 +79,6 @@ azure_login() {
 	echo "Logging into Azure..."
 	az login --use-device-code
 }
-
-# Calling the login function
-azure_login
 
 # Function to retrieve the subscription ID using Azure CLI to avoid errors when working with Azure resources
 get_subscription_id() {
@@ -268,6 +265,7 @@ prompt_premade_st() {
     read -p "Would you like to use a pre-made storage account? (yes or no): " use_premade
     case $use_premade in
         Y|y|YES|yes)
+            read -p "Enter the name of your pre-made storage account: " storage_name
             if storage_account_exists "$storage_name"; then
                 echo "Using pre-made storage account: $storage_name."
             else 
@@ -320,7 +318,7 @@ assign_role() {
 # Function to check if storage container exists
 storage_container_exists() {
     local storage_container_name=$1
-    az storage container show --name "$storage_container_name" &> /dev/null
+    az storage container show --name "$storage_container_name" --account-name "$storage_name" --auth-mode login &> /dev/null
     return $?
 } 
 
@@ -374,7 +372,7 @@ prompt_premade_sc() {
     read -p "Would you like to use a pre-made storage container? (yes or no): " use_premade
     case $use_premade in
         Y|y|YES|yes)
-            read -p "Enter the name of your pre-made storage container: " storage_account_name
+            read -p "Enter the name of your pre-made storage container: " storage_container_name
             if storage_container_exists "$storage_container_name"; then
                 echo "Using pre-made storage container: $storage_container_name."
             else 
@@ -402,25 +400,48 @@ list_storage_containers() {
     az storage container list --account-name "$storage_name" --auth-mode login -o table
 }
 
-# Function to upload a single file
+# Function to upload a single file and print shareable link
 file_upload() {
     az storage blob upload --account-name "$storage_name" --auth-mode login --container-name "$storage_container_name" --name "$file_name" --file "$file_path"
     if [ $? -eq 0 ]; then
         echo "Successfully uploaded file: $file_name."
+        generate_shareable_link
     else 
         echo "Error: Failed to upload file: $file_name."
         exit 1
     fi
 }
 
-# Function to overwrite file
+# Function to overwrite file and print shareable link
 file_overwrite() {
     az storage blob upload --account-name "$storage_name" --auth-mode login --container-name "$storage_container_name" --name "$file_name" --file "$file_path" --overwrite true
     if [ $? -eq 0 ]; then
         echo "File successfully overwritten."
+        generate_shareable_link
     else 
         echo "Error: Failed to overwrite file."
         exit 1
+    fi 
+}
+
+# Function to generate and print a shareable link for blobs with SAS token
+generate_shareable_link() {
+    # Get expiry date (compatible with MacOS and GNU date)
+    if [[ "$OSTYPE" == "darwin"* ]]; then 
+        # macOS date command
+        expiry_date=$(date -u -v +1d +%Y-%m-%dT%H:%MZ)
+    else 
+        # Linux/GNU date command
+        expiry_date=$(date -u -d '1 day' +%Y-%m-%dT%H:%MZ)
+    fi
+
+    # Generate SAS token and URL
+    sas_token=$(az storage blob generate-sas --account-name "$storage_name" --container-name "$storage_container_name" --name "$file_name" --permissions acdrw --expiry "$expiry_date" --auth-mode login --as-user --output tsv)
+    if [ $? -eq 0 ]; then
+        blob_url=$(az storage blob url --account-name "$storage_name" --container-name "$storage_container_name" --name "$file_name" --output tsv)
+        echo "Shareable link for $file_name: ${blob_url}?${sas_token}"
+    else 
+        echo "Error: failed to generate shareable link for: $file_name."
     fi 
 }
 
@@ -522,6 +543,8 @@ choose_upload_type() {
        esac
 }
 
+# Calling functions 
+azure_login
 get_subscription_id
 select_region
 prompt_premade_rg
