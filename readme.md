@@ -35,21 +35,22 @@ chmod +x CloudUploader.sh
 ```bash
 ./CloudUploader.sh
 ```
+
 2. Follow the prompts to:
 
-* Install Azure CLI on your system (if not already installed).
+* **Install Azure CLI:** Install Azure CLI on your system (if not already installed).
 
-* Login and authenticate your active Azure account.
+* **Login Azure CLI:** Login and authenticate your active Azure account.
 
-* Select your subscription number.
+* **Select Subscription:** Select your subscription number.
 
-* Select an Azure region.
+* **Select Region:** Select an Azure region.
 
-* Provide names for resource types (resource groups, storage accounts and storage containers) following the guidance to ensure a valid and globally unique name. Here, you can choose whether to create a new resource type or use a pre-existing one.
+* **Name Resources:** Provide names for resource types (resource groups, storage accounts and storage containers) following the guidance to ensure a valid and globally unique name. Here, you can choose whether to create a new resource type or use a pre-existing one.
 
-* Provide an accurate path to the file or directory you want to upload to Azure storage.
+* **Provide Local File or Directory Path:** Provide an accurate path to the file or directory you want to upload to Azure storage.
 
-* Choose whether to overwrite, skip upload or rename existing files in your storage container.
+* **File Handling:** Choose whether to overwrite, skip upload or rename existing files in your storage container.
 
 ## Features
 
