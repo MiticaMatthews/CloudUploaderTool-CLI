@@ -1,4 +1,4 @@
-Microsoft Azure File Uploader Script
+# Microsoft Azure File Uploader Script
 
 This Bash script is designed to automate the process of uploading files to Azure Blob Storage via Command-Line Interface (CLI). It simplifies the setup of Azure resources, automates the assignment of role-based permissions, supports both single file and batch file uploads and generates shareable links using SAS tokens for added security.
 
